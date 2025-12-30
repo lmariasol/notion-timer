@@ -8,7 +8,7 @@ This timer helps you track how much time you spend working on a specific page or
 
 ## ✨ Features
 
-- 🟢 **Start** / 🔴 **End** buttons
+-  **Start** / **End** buttons
 - ⏱️ Live running timer (HH:MM:SS)
 - 🕒 **24-hour clock format**
 - 📅 Daily session list
