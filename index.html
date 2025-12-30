@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notion Page Timer</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; padding: 16px; background: #fff; }
+    .card {
+      max-width: 520px;
+      border: 1px solid #e7e7e7;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+    }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .timer {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 10px 0 4px;
+    }
+    .meta { color: #555; font-size: 13px; margin-bottom: 10px; }
+    button {
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .start { background: #16a34a; } /* green */
+    .end { background: #dc2626; }   /* red */
+    .clear { background: #6b7280; } /* gray */
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      font-size: 12px;
+      color: #111;
+      border: 1px solid #e5e7eb;
+    }
+    .log { margin-top: 10px; }
+    .log h3 { margin: 10px 0 6px; font-size: 14px; }
+    .log ul { margin: 0; padding-left: 18px; color: #111; }
+    .log li { margin: 4px 0; font-size: 13px; color: #222; }
+    .hint { margin-top: 10px; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <span class="pill" id="statusPill">Status: stopped</span>
+      <span class="pill" id="todayTotalPill">Today total: 00:00:00</span>
+    </div>
+
+    <div class="timer" id="timerText">00:00:00</div>
+    <div class="meta" id="metaText">Press Start to begin.</div>
+
+    <div class="row">
+      <button class="start" id="startBtn">Start</button>
+      <button class="end" id="endBtn" disabled>End</button>
+      <button class="clear" id="clearBtn" title="Clears all saved sessions for this timer">Clear</button>
+    </div>
+
+    <div class="log">
+      <h3>Sessions (today)</h3>
+      <ul id="logList"></ul>
+    </div>
+
+    <div class="hint">
+      Tip: Embed this page in Notion. Sessions are saved in this browser (localStorage).
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Unique key per hosted URL; change if you want separate timers per Notion page
+  const STORAGE_KEY = "notion_timer_sessions_v1";
+  const RUN_KEY = "notion_timer_running_v1";
+
+  const startBtn = document.getElementById("startBtn");
+  const endBtn = document.getElementById("endBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const timerText = document.getElementById("timerText");
+  const metaText = document.getElementById("metaText");
+  const statusPill = document.getElementById("statusPill");
+  const todayTotalPill = document.getElementById("todayTotalPill");
+  const logList = document.getElementById("logList");
+
+  let tickInterval = null;
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmtHMS = (ms) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  };
+
+  const todayKey = () => {
+    const d = new Date();
+    // local date YYYY-MM-DD
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const loadSessions = () => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveSessions = (sessions) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  };
+
+  const loadRunning = () => {
+    try {
+      return JSON.parse(localStorage.getItem(RUN_KEY)) || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveRunning = (running) => {
+    if (!running) localStorage.removeItem(RUN_KEY);
+    else localStorage.setItem(RUN_KEY, JSON.stringify(running));
+  };
+
+  const getTodaySessions = (sessions) => sessions.filter(s => s.day === todayKey());
+
+  const sumMs = (sessions) => sessions.reduce((acc, s) => acc + (s.durationMs || 0), 0);
+
+  const renderLog = () => {
+    const sessions = loadSessions();
+    const todaySessions = getTodaySessions(sessions);
+
+    // log list
+    logList.innerHTML = "";
+    if (todaySessions.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "No sessions yet.";
+      li.style.color = "#666";
+      logList.appendChild(li);
+    } else {
+      todaySessions
+        .slice() // copy
+        .reverse()
+        .forEach(s => {
+  const li = document.createElement("li");
+  const start = new Date(s.startTs);
+  const end = new Date(s.endTs);
+
+  li.textContent =
+    `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} → ` +
+    `${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}  ` +
+    `(${fmtHMS(s.durationMs)})`;
+
+  logList.appendChild(li);
+});
+
+    }
+
+    // today total
+    const total = sumMs(todaySessions);
+    todayTotalPill.textContent = `Today total: ${fmtHMS(total)}`;
+  };
+
+  const setRunningUI = (running) => {
+   if (running) {
+  statusPill.textContent = "Status: running";
+  startBtn.disabled = true;
+  endBtn.disabled = false;
+
+  const startTime = new Date(running.startTs);
+  metaText.textContent = `Started at ${startTime.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })}`;
+} else {
+  statusPill.textContent = "Status: stopped";
+  startBtn.disabled = false;
+  endBtn.disabled = true;
+  metaText.textContent = "Press Start to begin.";
+  timerText.textContent = "00:00:00";
+}
+  };
+
+  const startTicking = (running) => {
+    stopTicking();
+    if (!running) return;
+
+    const update = () => {
+      const now = Date.now();
+      const elapsed = now - running.startTs;
+      timerText.textContent = fmtHMS(elapsed);
+    };
+    update();
+    tickInterval = setInterval(update, 250);
+  };
+
+  const stopTicking = () => {
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = null;
+  };
+
+  // Actions
+  startBtn.addEventListener("click", () => {
+    const running = loadRunning();
+    if (running) return;
+
+    const startTs = Date.now();
+    const newRunning = { startTs, day: todayKey() };
+    saveRunning(newRunning);
+    setRunningUI(newRunning);
+    startTicking(newRunning);
+  });
+
+  endBtn.addEventListener("click", () => {
+    const running = loadRunning();
+    if (!running) return;
+
+    const endTs = Date.now();
+    const durationMs = endTs - running.startTs;
+
+    const sessions = loadSessions();
+    sessions.push({
+      day: running.day,
+      startTs: running.startTs,
+      endTs,
+      durationMs
+    });
+    saveSessions(sessions);
+    saveRunning(null);
+
+    setRunningUI(null);
+    stopTicking();
+    renderLog();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(RUN_KEY);
+    setRunningUI(null);
+    stopTicking();
+    renderLog();
+  });
+
+  // Init
+  const running = loadRunning();
+  setRunningUI(running);
+  renderLog();
+  if (running) startTicking(running);
+})();
+</script>
+</body>
+</html>
