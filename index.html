@@ -5,49 +5,160 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Notion Page Timer</title>
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 0; padding: 16px; background: #fff; }
-    .card {
-      max-width: 520px;
-      border: 1px solid #e7e7e7;
-      border-radius: 14px;
-      padding: 14px;
-      box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+   :root {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+    /* Light (default tokens) */
+    --bg: #ffffff;
+    --card-bg: #ffffff;
+    --text: #111111;
+    --muted: #555555;
+    --border: #e7e7e7;
+    --shadow: 0 1px 8px rgba(0,0,0,0.04);
+    --pill-bg: #f3f4f6;
+    --pill-border: #e5e7eb;
+
+    --toggle-bg: #f3f4f6;
+    --toggle-border: #e5e7eb;
+    --toggle-text: #111111;
+    --toggle-active-bg: #e5e7eb;
+  }
+
+  /* Auto dark mode (used when theme=auto) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0f14;
+      --card-bg: #0f1620;
+      --text: #e5e7eb;
+      --muted: #a1a1aa;
+      --border: #253041;
+      --shadow: 0 1px 10px rgba(0,0,0,0.35);
+      --pill-bg: #111827;
+      --pill-border: #263244;
+
+      --toggle-bg: #111827;
+      --toggle-border: #263244;
+      --toggle-text: #e5e7eb;
+      --toggle-active-bg: #1f2937;
     }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .timer {
-      font-size: 34px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      margin: 10px 0 4px;
-    }
-    .meta { color: #555; font-size: 13px; margin-bottom: 10px; }
-    button {
-      border: 0;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #fff;
-    }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .start { background: #16a34a; } /* green */
-    .end { background: #dc2626; }   /* red */
-    .clear { background: #6b7280; } /* gray */
-    .pill {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #f3f4f6;
-      font-size: 12px;
-      color: #111;
-      border: 1px solid #e5e7eb;
-    }
-    .log { margin-top: 10px; }
-    .log h3 { margin: 10px 0 6px; font-size: 14px; }
-    .log ul { margin: 0; padding-left: 18px; color: #111; }
-    .log li { margin: 4px 0; font-size: 13px; color: #222; }
-    .hint { margin-top: 10px; font-size: 12px; color: #666; }
+  }
+
+  /* Manual overrides */
+  html[data-theme="light"] {
+    --bg: #ffffff;
+    --card-bg: #ffffff;
+    --text: #111111;
+    --muted: #555555;
+    --border: #e7e7e7;
+    --shadow: 0 1px 8px rgba(0,0,0,0.04);
+    --pill-bg: #f3f4f6;
+    --pill-border: #e5e7eb;
+
+    --toggle-bg: #f3f4f6;
+    --toggle-border: #e5e7eb;
+    --toggle-text: #111111;
+    --toggle-active-bg: #e5e7eb;
+  }
+
+  html[data-theme="dark"] {
+    --bg: #0b0f14;
+    --card-bg: #0f1620;
+    --text: #e5e7eb;
+    --muted: #a1a1aa;
+    --border: #253041;
+    --shadow: 0 1px 10px rgba(0,0,0,0.35);
+    --pill-bg: #111827;
+    --pill-border: #263244;
+
+    --toggle-bg: #111827;
+    --toggle-border: #263244;
+    --toggle-text: #e5e7eb;
+    --toggle-active-bg: #1f2937;
+  }
+
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); }
+
+  .card {
+    max-width: 520px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .timer {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 10px 0 4px;
+    color: var(--text);
+  }
+
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+
+  button {
+    border: 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .start { background: #16a34a; }
+  .end   { background: #dc2626; }
+  .clear { background: #6b7280; }
+
+  .pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--pill-bg);
+    font-size: 12px;
+    color: var(--text);
+    border: 1px solid var(--pill-border);
+  }
+
+  .log { margin-top: 10px; }
+  .log h3 { margin: 10px 0 6px; font-size: 14px; color: var(--text); }
+  .log ul { margin: 0; padding-left: 18px; color: var(--text); }
+  .log li { margin: 4px 0; font-size: 13px; color: var(--text); }
+
+  .hint { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+  /* Toggle UI */
+  .themeToggle {
+    display: inline-flex;
+    border: 1px solid var(--toggle-border);
+    background: var(--toggle-bg);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-left: auto; /* pushes it right when space allows */
+  }
+
+  .themeBtn {
+    background: transparent;
+    color: var(--toggle-text);
+    padding: 6px 10px;
+    border-radius: 0;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    border: 0;
+  }
+
+  .themeBtn[aria-pressed="true"] {
+    background: var(--toggle-active-bg);
+  }
+
+  .themeBtn:focus-visible {
+    outline: 2px solid var(--toggle-border);
+    outline-offset: 2px;
+  }
   </style>
 </head>
 <body>
@@ -55,6 +166,13 @@
     <div class="row">
       <span class="pill" id="statusPill">Status: stopped</span>
       <span class="pill" id="todayTotalPill">Today total: 00:00:00</span>
+	  
+	  <div class="themeToggle" role="group" aria-label="Theme">
+  <button type="button" class="themeBtn" data-theme="auto" aria-pressed="true">Auto</button>
+  <button type="button" class="themeBtn" data-theme="light" aria-pressed="false">Light</button>
+  <button type="button" class="themeBtn" data-theme="dark" aria-pressed="false">Dark</button>
+</div>
+
     </div>
 
     <div class="timer" id="timerText">00:00:00</div>
@@ -92,6 +210,46 @@
   const logList = document.getElementById("logList");
 
   let tickInterval = null;
+  
+    // --- Theme toggle (Light / Dark / Auto) ---
+  const THEME_KEY = "notion_timer_theme_v1"; // stores: "auto" | "light" | "dark"
+  const themeButtons = Array.from(document.querySelectorAll(".themeBtn"));
+
+  const applyTheme = (theme) => {
+    // theme: "auto" | "light" | "dark"
+    if (theme === "auto") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+
+    // Update pressed state
+    themeButtons.forEach(btn => {
+      const isActive = btn.dataset.theme === theme;
+      btn.setAttribute("aria-pressed", String(isActive));
+    });
+  };
+
+  const loadTheme = () => {
+    const saved = localStorage.getItem(THEME_KEY);
+    return (saved === "light" || saved === "dark" || saved === "auto") ? saved : "auto";
+  };
+
+  const saveTheme = (theme) => localStorage.setItem(THEME_KEY, theme);
+
+  // Hook up buttons
+  themeButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const theme = btn.dataset.theme;
+      saveTheme(theme);
+      applyTheme(theme);
+    });
+  });
+
+  // Init theme
+  applyTheme(loadTheme());
+  // --- End theme toggle ---
+
 
   const pad = (n) => String(n).padStart(2, "0");
   const fmtHMS = (ms) => {
